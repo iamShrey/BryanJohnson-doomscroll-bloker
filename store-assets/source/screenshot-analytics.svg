@@ -1,0 +1,24 @@
+<svg width="1280" height="800" viewBox="0 0 1280 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="800" fill="#F8FAFC"/>
+  <rect x="126" y="88" width="1028" height="624" rx="18" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <text x="174" y="164" fill="#111827" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="850">Doomscroll Blocker</text>
+  <rect x="982" y="128" width="88" height="48" rx="24" fill="#10B981"/>
+  <circle cx="1046" cy="152" r="20" fill="#FFFFFF"/>
+  <rect x="174" y="220" width="286" height="122" rx="12" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <rect x="497" y="220" width="286" height="122" rx="12" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <rect x="820" y="220" width="286" height="122" rx="12" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <text x="205" y="282" fill="#111827" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="850">12</text>
+  <text x="205" y="314" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">BLOCKS</text>
+  <text x="528" y="282" fill="#111827" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="850">38m</text>
+  <text x="528" y="314" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">INTERRUPTED</text>
+  <text x="851" y="282" fill="#111827" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="850">612</text>
+  <text x="851" y="314" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">AVG PX/S</text>
+  <rect x="174" y="388" width="932" height="2" fill="#E2E8F0"/>
+  <text x="174" y="454" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="800">Pattern insights</text>
+  <text x="174" y="508" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="24">Top trigger domain</text>
+  <text x="1010" y="508" fill="#111827" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" text-anchor="end">reddit.com</text>
+  <text x="174" y="570" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="24">Top content category</text>
+  <text x="1010" y="570" fill="#111827" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" text-anchor="end">Social</text>
+  <text x="174" y="632" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="24">Raw page text</text>
+  <text x="1010" y="632" fill="#047857" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" text-anchor="end">Never stored</text>
+</svg>

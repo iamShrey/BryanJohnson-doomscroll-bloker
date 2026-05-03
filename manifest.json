@@ -4,6 +4,12 @@
   "description": "Interrupts excessive scrolling with a speed-adjusted animated pause.",
   "version": "1.0.0",
   "permissions": ["storage"],
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  },
   "background": {
     "service_worker": "src/background.js"
   },
@@ -17,6 +23,12 @@
   ],
   "action": {
     "default_title": "Doomscroll Blocker",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png",
+      "48": "assets/icons/icon-48.png",
+      "128": "assets/icons/icon-128.png"
+    },
     "default_popup": "src/popup.html"
   }
 }
