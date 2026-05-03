@@ -93,6 +93,16 @@ button:hover {
   background: #1f2937;
 }
 
+.ghost {
+  background: #e5e7eb;
+  color: #111827;
+  padding: 7px 9px;
+}
+
+.ghost:hover {
+  background: #d1d5db;
+}
+
 #status {
   color: #047857;
   font-size: 0.8rem;
@@ -140,4 +150,84 @@ button:hover {
 
 .switch input:checked + span::after {
   transform: translateX(20px);
+}
+
+.analytics {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.section-title {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.section-title h2 {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.stats {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.stats div {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 9px;
+}
+
+.stats span {
+  color: #111827;
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+.stats p {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  margin: 4px 0 0;
+  text-transform: uppercase;
+}
+
+dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+dl div {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+dt,
+dd {
+  font-size: 0.78rem;
+  margin: 0;
+}
+
+dt {
+  color: #64748b;
+  font-weight: 750;
+}
+
+dd {
+  color: #111827;
+  font-weight: 800;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

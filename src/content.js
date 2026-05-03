@@ -3,7 +3,7 @@ const DEFAULT_SETTINGS = {
   minBlockMinutes: 1,
   maxBlockMinutes: 5,
   rapidScrollPxPerSecond: 650,
-  screenReadingEnabled: true,
+  contentInsightsEnabled: true,
   scrollWindowSeconds: 90,
   scrollDistancePx: 7200,
   domains: [
@@ -33,10 +33,7 @@ async function init() {
 
   const activeBlock = await getActiveBlock();
   if (activeBlock && activeBlock.endTime > Date.now()) {
-    blockPage(activeBlock.endTime, activeBlock.animation, {
-      pageSnapshot: activeBlock.pageSnapshot,
-      persist: false
-    });
+    blockPage(activeBlock.endTime, activeBlock.animation, { persist: false });
     return;
   }
 
@@ -66,6 +63,13 @@ function normalizeSettings(savedSettings) {
 
   if (typeof savedSettings.blockMinutes === "number" && typeof savedSettings.maxBlockMinutes !== "number") {
     settings.maxBlockMinutes = savedSettings.blockMinutes;
+  }
+
+  if (
+    typeof savedSettings.screenReadingEnabled === "boolean" &&
+    typeof savedSettings.contentInsightsEnabled !== "boolean"
+  ) {
+    settings.contentInsightsEnabled = savedSettings.screenReadingEnabled;
   }
 
   settings.minBlockMinutes = Math.min(settings.minBlockMinutes, settings.maxBlockMinutes);
@@ -133,18 +137,33 @@ function recordScroll(distance) {
   const totalDistance = scrollEvents.reduce((sum, event) => sum + event.distance, 0);
 
   if (totalDistance >= settings.scrollDistancePx) {
-    const durationMs = getBlockDurationMs(totalDistance, now);
+    const scrollStats = getScrollStats(totalDistance, now);
+    const durationMs = getBlockDurationMs(scrollStats.pxPerSecond);
     const endTime = Date.now() + durationMs;
     const animation = ANIMATIONS[Math.floor(Math.random() * ANIMATIONS.length)];
-    const pageSnapshot = settings.screenReadingEnabled ? readVisiblePageText() : null;
-    blockPage(endTime, animation, { pageSnapshot });
+    const contentInsight = settings.contentInsightsEnabled ? analyzeVisiblePageContent() : { category: "unknown" };
+
+    blockPage(endTime, animation, {
+      analyticsEvent: {
+        category: contentInsight.category,
+        durationMs,
+        host: location.hostname,
+        pxPerSecond: scrollStats.pxPerSecond,
+        totalDistance
+      }
+    });
   }
 }
 
-function getBlockDurationMs(totalDistance, now) {
+function getScrollStats(totalDistance, now) {
   const firstScrollTime = scrollEvents[0]?.time || now;
   const elapsedSeconds = Math.max(1, (now - firstScrollTime) / 1000);
   const pxPerSecond = totalDistance / elapsedSeconds;
+
+  return { elapsedSeconds, pxPerSecond };
+}
+
+function getBlockDurationMs(pxPerSecond) {
   const slowSpeed = settings.scrollDistancePx / settings.scrollWindowSeconds;
   const fastSpeed = Math.max(settings.rapidScrollPxPerSecond, slowSpeed + 1);
   const speedRatio = Math.min(1, Math.max(0, (pxPerSecond - slowSpeed) / (fastSpeed - slowSpeed)));
@@ -154,18 +173,22 @@ function getBlockDurationMs(totalDistance, now) {
 }
 
 function blockPage(endTime, animation, options = {}) {
-  const { pageSnapshot = null, persist = true } = options;
+  const { analyticsEvent = null, persist = true } = options;
 
   isBlocked = true;
   scrollEvents = [];
 
   if (persist) {
-    sendRuntimeMessage({ type: "DSB_START_BLOCK", block: { endTime, animation, pageSnapshot } });
+    sendRuntimeMessage({
+      type: "DSB_START_BLOCK",
+      analyticsEvent,
+      block: { endTime, animation }
+    });
   }
 
   document.documentElement.classList.add("dsb-locked");
   document.getElementById("doomscroll-blocker-overlay")?.remove();
-  document.body.appendChild(createOverlay(animation, pageSnapshot));
+  document.body.appendChild(createOverlay(animation));
 
   const updateTimer = () => {
     const remaining = Math.max(0, endTime - Date.now());
@@ -196,11 +219,13 @@ function unblockPage() {
   lastY = window.scrollY;
 }
 
-function readVisiblePageText() {
+function analyzeVisiblePageContent() {
   if (!document.body) {
-    return null;
+    return { category: "unknown" };
   }
 
+  const categoryScores = createCategoryScores();
+  let wordsSeen = 0;
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const text = normalizeText(node.textContent || "");
@@ -218,29 +243,13 @@ function readVisiblePageText() {
     }
   });
 
-  const snippets = [];
-  const seen = new Set();
-
-  while (walker.nextNode() && snippets.length < 6) {
+  while (walker.nextNode() && wordsSeen < 800) {
     const text = normalizeText(walker.currentNode.textContent || "");
-    const dedupeKey = text.toLowerCase().slice(0, 80);
-
-    if (!seen.has(dedupeKey)) {
-      seen.add(dedupeKey);
-      snippets.push(text.slice(0, 220));
-    }
+    wordsSeen += text.split(" ").length;
+    scoreText(text, categoryScores);
   }
 
-  if (!snippets.length) {
-    return null;
-  }
-
-  return {
-    capturedAt: Date.now(),
-    host: location.hostname,
-    title: document.title ? normalizeText(document.title).slice(0, 120) : location.hostname,
-    snippets
-  };
+  return { category: getTopCategory(categoryScores) };
 }
 
 function isIgnoredTextElement(element) {
@@ -272,7 +281,46 @@ function normalizeText(text) {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function createOverlay(animation, pageSnapshot) {
+function createCategoryScores() {
+  return {
+    entertainment: 0,
+    news: 0,
+    outrage: 0,
+    shopping: 0,
+    social: 0,
+    sports: 0,
+    wellness: 0
+  };
+}
+
+function scoreText(text, scores) {
+  const lowerText = text.toLowerCase();
+  const keywords = {
+    entertainment: ["celebrity", "movie", "music", "trailer", "streaming", "show", "episode"],
+    news: ["breaking", "election", "policy", "government", "market", "economy", "world"],
+    outrage: ["shocking", "exposed", "destroyed", "furious", "scandal", "controversy", "rage"],
+    shopping: ["sale", "deal", "discount", "buy", "cart", "shipping", "limited offer"],
+    social: ["follow", "reply", "comment", "liked", "share", "thread", "posted"],
+    sports: ["score", "match", "season", "league", "team", "player", "highlights"],
+    wellness: ["sleep", "focus", "workout", "meditation", "health", "habit", "nutrition"]
+  };
+
+  for (const [category, terms] of Object.entries(keywords)) {
+    for (const term of terms) {
+      if (lowerText.includes(term)) {
+        scores[category] += 1;
+      }
+    }
+  }
+}
+
+function getTopCategory(scores) {
+  const [category, score] = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+
+  return score > 0 ? category : "uncategorized";
+}
+
+function createOverlay(animation) {
   const overlay = document.createElement("section");
   overlay.id = "doomscroll-blocker-overlay";
   overlay.setAttribute("role", "dialog");
@@ -288,43 +336,10 @@ function createOverlay(animation, pageSnapshot) {
       <h1>Pause the feed. Let your brain catch up.</h1>
       <div id="dsb-timer" class="dsb-timer">05:00</div>
       <p class="dsb-copy">This pause belongs only to this tab. Close the tab and the timer is gone.</p>
-      ${createPageSnapshotMarkup(pageSnapshot)}
     </div>
   `;
 
   return overlay;
-}
-
-function createPageSnapshotMarkup(pageSnapshot) {
-  if (!pageSnapshot?.snippets?.length) {
-    return "";
-  }
-
-  const snippets = pageSnapshot.snippets
-    .map((snippet) => `<li>${escapeHtml(snippet)}</li>`)
-    .join("");
-
-  return `
-    <aside class="dsb-page-snapshot" aria-label="Visible page text detected before the pause">
-      <p>Visible page text detected locally</p>
-      <strong>${escapeHtml(pageSnapshot.title || pageSnapshot.host || "Current page")}</strong>
-      <ul>${snippets}</ul>
-    </aside>
-  `;
-}
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (character) => {
-    const entities = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      "\"": "&quot;",
-      "'": "&#039;"
-    };
-
-    return entities[character];
-  });
 }
 
 function createAnimationMarkup(animation) {

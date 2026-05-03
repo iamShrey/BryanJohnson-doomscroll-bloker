@@ -70,50 +70,6 @@
   max-width: 520px;
 }
 
-.dsb-page-snapshot {
-  background: rgba(15, 23, 42, 0.68);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
-  margin-top: 24px;
-  max-height: min(30vh, 230px);
-  max-width: 620px;
-  overflow: auto;
-  padding: 16px;
-  text-align: left;
-  width: min(100%, 620px);
-}
-
-.dsb-page-snapshot p {
-  color: #86efac;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  margin: 0 0 8px;
-  text-transform: uppercase;
-}
-
-.dsb-page-snapshot strong {
-  color: #ffffff;
-  display: block;
-  font-size: 1rem;
-  line-height: 1.35;
-  margin-bottom: 10px;
-}
-
-.dsb-page-snapshot ul {
-  display: grid;
-  gap: 8px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.dsb-page-snapshot li {
-  color: #d1d5db;
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
 .dsb-animation {
   height: 180px;
   position: relative;
@@ -268,10 +224,6 @@
   .dsb-animation {
     height: 132px;
     width: 132px;
-  }
-
-  .dsb-page-snapshot {
-    max-height: 26vh;
   }
 
   .dsb-orbit span {
