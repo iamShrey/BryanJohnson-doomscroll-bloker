@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Doomscroll Blocker",
+  "description": "Interrupts excessive scrolling with a five-minute animated pause.",
+  "version": "1.0.0",
+  "permissions": ["storage"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content.js"],
+      "css": ["src/styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Doomscroll Blocker",
+    "default_popup": "src/popup.html"
+  }
+}
