@@ -3,6 +3,7 @@ const DEFAULT_SETTINGS = {
   minBlockMinutes: 1,
   maxBlockMinutes: 5,
   rapidScrollPxPerSecond: 650,
+  screenReadingEnabled: true,
   scrollWindowSeconds: 90,
   scrollDistancePx: 7200,
   domains: [
@@ -25,6 +26,7 @@ const fields = {
   scrollWindowSeconds: document.getElementById("scrollWindowSeconds"),
   scrollDistancePx: document.getElementById("scrollDistancePx"),
   rapidScrollPxPerSecond: document.getElementById("rapidScrollPxPerSecond"),
+  screenReadingEnabled: document.getElementById("screenReadingEnabled"),
   domains: document.getElementById("domains"),
   save: document.getElementById("save"),
   status: document.getElementById("status")
@@ -39,6 +41,7 @@ chrome.storage.sync.get(STORAGE_KEY, (result) => {
   fields.scrollWindowSeconds.value = settings.scrollWindowSeconds;
   fields.scrollDistancePx.value = settings.scrollDistancePx;
   fields.rapidScrollPxPerSecond.value = settings.rapidScrollPxPerSecond;
+  fields.screenReadingEnabled.checked = settings.screenReadingEnabled;
   fields.domains.value = settings.domains.join("\n");
 });
 
@@ -58,6 +61,7 @@ fields.save.addEventListener("click", () => {
       5000,
       DEFAULT_SETTINGS.rapidScrollPxPerSecond
     ),
+    screenReadingEnabled: fields.screenReadingEnabled.checked,
     domains: fields.domains.value
       .split(/\n|,/)
       .map((domain) => domain.trim())

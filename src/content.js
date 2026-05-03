@@ -3,6 +3,7 @@ const DEFAULT_SETTINGS = {
   minBlockMinutes: 1,
   maxBlockMinutes: 5,
   rapidScrollPxPerSecond: 650,
+  screenReadingEnabled: true,
   scrollWindowSeconds: 90,
   scrollDistancePx: 7200,
   domains: [
@@ -32,7 +33,10 @@ async function init() {
 
   const activeBlock = await getActiveBlock();
   if (activeBlock && activeBlock.endTime > Date.now()) {
-    blockPage(activeBlock.endTime, activeBlock.animation, { persist: false });
+    blockPage(activeBlock.endTime, activeBlock.animation, {
+      pageSnapshot: activeBlock.pageSnapshot,
+      persist: false
+    });
     return;
   }
 
@@ -132,7 +136,8 @@ function recordScroll(distance) {
     const durationMs = getBlockDurationMs(totalDistance, now);
     const endTime = Date.now() + durationMs;
     const animation = ANIMATIONS[Math.floor(Math.random() * ANIMATIONS.length)];
-    blockPage(endTime, animation);
+    const pageSnapshot = settings.screenReadingEnabled ? readVisiblePageText() : null;
+    blockPage(endTime, animation, { pageSnapshot });
   }
 }
 
@@ -148,17 +153,19 @@ function getBlockDurationMs(totalDistance, now) {
   return Math.max(1, minutes) * 60 * 1000;
 }
 
-function blockPage(endTime, animation, options = { persist: true }) {
+function blockPage(endTime, animation, options = {}) {
+  const { pageSnapshot = null, persist = true } = options;
+
   isBlocked = true;
   scrollEvents = [];
 
-  if (options.persist) {
-    sendRuntimeMessage({ type: "DSB_START_BLOCK", block: { endTime, animation } });
+  if (persist) {
+    sendRuntimeMessage({ type: "DSB_START_BLOCK", block: { endTime, animation, pageSnapshot } });
   }
 
   document.documentElement.classList.add("dsb-locked");
   document.getElementById("doomscroll-blocker-overlay")?.remove();
-  document.body.appendChild(createOverlay(animation));
+  document.body.appendChild(createOverlay(animation, pageSnapshot));
 
   const updateTimer = () => {
     const remaining = Math.max(0, endTime - Date.now());
@@ -189,7 +196,83 @@ function unblockPage() {
   lastY = window.scrollY;
 }
 
-function createOverlay(animation) {
+function readVisiblePageText() {
+  if (!document.body) {
+    return null;
+  }
+
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const text = normalizeText(node.textContent || "");
+      const element = node.parentElement;
+
+      if (!element || text.length < 18 || element.closest("#doomscroll-blocker-overlay")) {
+        return NodeFilter.FILTER_REJECT;
+      }
+
+      if (isIgnoredTextElement(element) || !isElementVisible(element)) {
+        return NodeFilter.FILTER_REJECT;
+      }
+
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+
+  const snippets = [];
+  const seen = new Set();
+
+  while (walker.nextNode() && snippets.length < 6) {
+    const text = normalizeText(walker.currentNode.textContent || "");
+    const dedupeKey = text.toLowerCase().slice(0, 80);
+
+    if (!seen.has(dedupeKey)) {
+      seen.add(dedupeKey);
+      snippets.push(text.slice(0, 220));
+    }
+  }
+
+  if (!snippets.length) {
+    return null;
+  }
+
+  return {
+    capturedAt: Date.now(),
+    host: location.hostname,
+    title: document.title ? normalizeText(document.title).slice(0, 120) : location.hostname,
+    snippets
+  };
+}
+
+function isIgnoredTextElement(element) {
+  return Boolean(
+    element.closest(
+      "script, style, noscript, svg, canvas, video, audio, input, textarea, select, option, button, nav, header, footer"
+    )
+  );
+}
+
+function isElementVisible(element) {
+  const rect = element.getBoundingClientRect();
+  const style = window.getComputedStyle(element);
+
+  return (
+    rect.width > 0 &&
+    rect.height > 0 &&
+    rect.bottom >= 0 &&
+    rect.right >= 0 &&
+    rect.top <= window.innerHeight &&
+    rect.left <= window.innerWidth &&
+    style.display !== "none" &&
+    style.visibility !== "hidden" &&
+    Number(style.opacity) > 0.05
+  );
+}
+
+function normalizeText(text) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function createOverlay(animation, pageSnapshot) {
   const overlay = document.createElement("section");
   overlay.id = "doomscroll-blocker-overlay";
   overlay.setAttribute("role", "dialog");
@@ -205,10 +288,43 @@ function createOverlay(animation) {
       <h1>Pause the feed. Let your brain catch up.</h1>
       <div id="dsb-timer" class="dsb-timer">05:00</div>
       <p class="dsb-copy">This pause belongs only to this tab. Close the tab and the timer is gone.</p>
+      ${createPageSnapshotMarkup(pageSnapshot)}
     </div>
   `;
 
   return overlay;
+}
+
+function createPageSnapshotMarkup(pageSnapshot) {
+  if (!pageSnapshot?.snippets?.length) {
+    return "";
+  }
+
+  const snippets = pageSnapshot.snippets
+    .map((snippet) => `<li>${escapeHtml(snippet)}</li>`)
+    .join("");
+
+  return `
+    <aside class="dsb-page-snapshot" aria-label="Visible page text detected before the pause">
+      <p>Visible page text detected locally</p>
+      <strong>${escapeHtml(pageSnapshot.title || pageSnapshot.host || "Current page")}</strong>
+      <ul>${snippets}</ul>
+    </aside>
+  `;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#039;"
+    };
+
+    return entities[character];
+  });
 }
 
 function createAnimationMarkup(animation) {
