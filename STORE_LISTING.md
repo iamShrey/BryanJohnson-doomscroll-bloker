@@ -25,7 +25,7 @@ When you scroll too much on configured sites, the extension covers the tab with 
 Features:
 
 - Watch common doomscrolling sites by default, including Reddit, YouTube, TikTok, Instagram, Facebook, and X/Twitter.
-- Configure your own watched domains.
+- Enable or disable the supported watched domains.
 - Tune scroll distance, watch window, rapid-scroll speed, and timer range.
 - Keep active timers across refreshes.
 - Close the tab to end that tab's timer.
@@ -48,7 +48,7 @@ Used to save user settings, tab-local active block timers, and aggregate local a
 
 ### host access / content scripts
 
-Used to measure scrolling on configured websites and display the blocker overlay inside the active tab. The extension ships with common feed domains and lets users configure the domain list.
+Used to measure scrolling on supported watched websites and display the blocker overlay inside the active tab. The extension only injects on the listed social and video feed domains instead of requesting access to every website.
 
 ## Privacy Practice Notes
 
@@ -62,7 +62,7 @@ Suggested dashboard disclosure:
 ## Test Instructions
 
 1. Load the extension package.
-2. Visit a watched domain or add a test domain in the popup.
+2. Visit a supported watched domain.
 3. Scroll past the configured threshold.
 4. Confirm that the animated blocker appears with a countdown.
 5. Refresh the tab and confirm that the countdown remains active.

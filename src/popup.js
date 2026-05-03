@@ -17,6 +17,7 @@ const DEFAULT_SETTINGS = {
   ]
 };
 
+const SUPPORTED_DOMAINS = new Set(DEFAULT_SETTINGS.domains);
 const STORAGE_KEY = "doomscrollBlockerSettings";
 
 const fields = {
@@ -70,14 +71,12 @@ fields.save.addEventListener("click", () => {
       DEFAULT_SETTINGS.rapidScrollPxPerSecond
     ),
     contentInsightsEnabled: fields.contentInsightsEnabled.checked,
-    domains: fields.domains.value
-      .split(/\n|,/)
-      .map((domain) => domain.trim())
-      .filter(Boolean)
+    domains: getSupportedDomainsFromInput(fields.domains.value)
   };
 
   chrome.storage.sync.set({ [STORAGE_KEY]: settings }, () => {
-    fields.status.textContent = "Saved. Reload open tabs to apply changes.";
+    fields.domains.value = settings.domains.join("\n");
+    fields.status.textContent = "Saved. Reload open watched tabs to apply changes.";
     window.setTimeout(() => {
       fields.status.textContent = "";
     }, 2500);
@@ -103,8 +102,32 @@ function normalizeSettings(savedSettings) {
   }
 
   settings.minBlockMinutes = Math.min(settings.minBlockMinutes, settings.maxBlockMinutes);
+  settings.domains = Array.isArray(settings.domains) ? filterSupportedDomains(settings.domains) : DEFAULT_SETTINGS.domains;
 
   return settings;
+}
+
+function getSupportedDomainsFromInput(value) {
+  const domains = value
+    .split(/\n|,/)
+    .map(normalizeDomain)
+    .filter(Boolean);
+
+  return filterSupportedDomains(domains);
+}
+
+function filterSupportedDomains(domains) {
+  const supportedDomains = domains.map(normalizeDomain).filter((domain) => SUPPORTED_DOMAINS.has(domain));
+  return [...new Set(supportedDomains)];
+}
+
+function normalizeDomain(domain) {
+  return domain
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
 }
 
 function sendRuntimeMessage(message) {

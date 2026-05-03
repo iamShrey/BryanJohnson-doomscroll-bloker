@@ -21,7 +21,7 @@ The extension can also analyze visible web page text locally when a block starts
 - Default block: 1 to 5 minutes, based on scroll speed.
 - Slow threshold crossings trend toward 5 minutes. Rapid scrolling around 650px/second or faster trends toward 1 minute.
 - Default content insights: on. The extension derives a broad content category locally, discards the page text, and stores only analytics counters.
-- The extension popup lets you change the domains, timer range, trigger distance, watch window, rapid-scroll speed, content insights, and local analytics.
+- The extension popup lets you enable or disable supported watched domains, timer range, trigger distance, watch window, rapid-scroll speed, content insights, and local analytics.
 
 ## Files
 

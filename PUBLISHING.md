@@ -9,7 +9,7 @@ Official publishing docs:
 
 ## Prepared Files
 
-- Extension ZIP: `dist/doomscroll-blocker-1.0.0.zip`
+- Extension ZIP: `dist/doomscroll-blocker-1.0.1.zip`
 - Extension icon: `assets/icons/icon-128.png`
 - Small promo image: `store-assets/small-promo.png`
 - Screenshots:
@@ -22,7 +22,7 @@ Official publishing docs:
 
 1. Register or open the Chrome Developer Dashboard.
 2. Add new item.
-3. Upload `dist/doomscroll-blocker-1.0.0.zip`.
+3. Upload `dist/doomscroll-blocker-1.0.1.zip`.
 4. Fill Store Listing using `STORE_LISTING.md`.
 5. Upload listing assets from `store-assets/`.
 6. Fill Privacy fields accurately.
