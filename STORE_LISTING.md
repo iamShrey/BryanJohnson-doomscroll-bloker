@@ -20,11 +20,11 @@ English
 
 Doomscroll Blocker helps you interrupt feed spirals before they take over your day.
 
-When you scroll too much on configured sites, the extension covers the tab with a calm animated pause and countdown. The pause length adapts to your scrolling pattern: slower long-form scrolling can trigger a longer reset, while rapid scrolling gets a shorter pattern break.
+When you scroll too much on supported sites, the extension covers the tab with a calm animated pause and countdown. The pause length adapts to your scrolling pattern: slower long-form scrolling can trigger a longer reset, while rapid scrolling gets a shorter pattern break.
 
 Features:
 
-- Watch common doomscrolling sites by default, including Reddit, YouTube, TikTok, Instagram, Facebook, and X/Twitter.
+- Watch supported feed-based sites without requesting access to every website.
 - Enable or disable the supported watched domains.
 - Tune scroll distance, watch window, rapid-scroll speed, and timer range.
 - Keep active timers across refreshes.
@@ -48,7 +48,7 @@ Used to save user settings, tab-local active block timers, and aggregate local a
 
 ### host access / content scripts
 
-Used to measure scrolling on supported watched websites and display the blocker overlay inside the active tab. The extension only injects on the listed social and video feed domains instead of requesting access to every website.
+Used to measure scrolling on supported watched websites and display the blocker overlay inside the active tab. The extension only injects on a limited set of supported feed-based domains instead of requesting access to every website.
 
 ## Privacy Practice Notes
 
