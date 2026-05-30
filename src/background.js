@@ -12,6 +12,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "DSB_RECORD_USAGE") {
+    recordUsageEvent(message.usageEvent).then((analytics) => sendResponse({ analytics }));
+    return true;
+  }
+
   const tabId = sender.tab?.id;
 
   if (!tabId) {
@@ -23,7 +28,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     getBlocks().then((blocks) => {
       const block = blocks[String(tabId)];
 
-      if (!block || block.endTime <= Date.now()) {
+      if (!block || (!block.unlockRequired && block.endTime <= Date.now())) {
         delete blocks[String(tabId)];
         saveBlocks(blocks).then(() => sendResponse({ block: null }));
         return;
@@ -76,6 +81,7 @@ function saveBlocks(blocks) {
 function createEmptyAnalytics() {
   return {
     byCategory: {},
+    byDay: {},
     byHost: {},
     maxPxPerSecond: 0,
     recent: [],
@@ -83,6 +89,9 @@ function createEmptyAnalytics() {
     totalInterruptedMs: 0,
     totalPxPerSecond: 0,
     totalScrollPx: 0,
+    totalUsageMs: 0,
+    usageByDay: {},
+    usageByHost: {},
     updatedAt: null
   };
 }
@@ -108,7 +117,9 @@ function recordAnalyticsEvent(event) {
     const durationMs = Math.max(0, Number(event.durationMs) || 0);
     const pxPerSecond = Math.max(0, Number(event.pxPerSecond) || 0);
     const totalDistance = Math.max(0, Number(event.totalDistance) || 0);
+    const trigger = sanitizeKey(event.trigger || "scroll");
     const time = Date.now();
+    const day = getDayKey(time);
 
     analytics.totalBlocks += 1;
     analytics.totalInterruptedMs += durationMs;
@@ -117,14 +128,39 @@ function recordAnalyticsEvent(event) {
     analytics.maxPxPerSecond = Math.max(analytics.maxPxPerSecond, pxPerSecond);
     analytics.byHost[host] = (analytics.byHost[host] || 0) + 1;
     analytics.byCategory[category] = (analytics.byCategory[category] || 0) + 1;
+    analytics.byDay[day] = (analytics.byDay[day] || 0) + 1;
     analytics.recent = [
-      { category, durationMs, host, pxPerSecond, time },
+      { category, durationMs, host, pxPerSecond, time, trigger },
       ...analytics.recent
     ].slice(0, 12);
     analytics.updatedAt = time;
 
     return saveAnalytics(analytics);
   });
+}
+
+function recordUsageEvent(event) {
+  if (!event) {
+    return getAnalytics();
+  }
+
+  return getAnalytics().then((analytics) => {
+    const host = sanitizeKey(event.host || "unknown");
+    const durationMs = Math.max(0, Math.min(60000, Number(event.durationMs) || 0));
+    const time = Date.now();
+    const day = getDayKey(time);
+
+    analytics.totalUsageMs += durationMs;
+    analytics.usageByHost[host] = (analytics.usageByHost[host] || 0) + durationMs;
+    analytics.usageByDay[day] = (analytics.usageByDay[day] || 0) + durationMs;
+    analytics.updatedAt = time;
+
+    return saveAnalytics(analytics).then(() => analytics);
+  });
+}
+
+function getDayKey(time) {
+  return new Date(time).toISOString().slice(0, 10);
 }
 
 function sanitizeKey(value) {

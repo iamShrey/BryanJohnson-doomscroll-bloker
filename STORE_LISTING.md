@@ -27,9 +27,10 @@ Features:
 - Watch supported feed-based sites without requesting access to every website.
 - Enable or disable the supported watched domains.
 - Tune scroll distance, watch window, rapid-scroll speed, and timer range.
+- Add focus hours, a daily active scrolling budget, and an optional strict unlock phrase after breaks.
 - Keep active timers across refreshes.
 - Close the tab to end that tab's timer.
-- View local analytics for blocks, interrupted time, average trigger speed, top domains, and broad content categories.
+- View and export local analytics for blocks, interrupted time, average trigger speed, active usage, top domains, and broad content categories.
 - Reset analytics whenever you want.
 
 Privacy:
@@ -38,7 +39,7 @@ Doomscroll Blocker runs locally in your browser. It does not send browsing data 
 
 ## Single Purpose
 
-Doomscroll Blocker detects excessive scrolling on user-configured websites and interrupts that tab with a timed animated pause, while providing local analytics to help users understand and reduce scrolling habits.
+Doomscroll Blocker detects excessive scrolling on user-configured websites and interrupts that tab with a timed animated pause, while providing local controls and analytics to help users understand and reduce scrolling habits.
 
 ## Permission Justification
 

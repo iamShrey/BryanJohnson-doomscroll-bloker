@@ -46,10 +46,56 @@
         <span>Analyze visible page text locally for category analytics. Raw text is never stored.</span>
       </label>
 
+      <section class="panel" aria-label="Premium controls">
+        <div class="section-title">
+          <h2>Focus controls</h2>
+          <span class="badge">Pro</span>
+        </div>
+
+        <label class="check">
+          <input id="scheduleEnabled" type="checkbox">
+          <span>Use focus hours to make scroll breaks stricter.</span>
+        </label>
+
+        <div class="split">
+          <label>
+            Start
+            <input id="scheduleStart" type="time">
+          </label>
+          <label>
+            End
+            <input id="scheduleEnd" type="time">
+          </label>
+        </div>
+
+        <label class="check">
+          <input id="dailyBudgetEnabled" type="checkbox">
+          <span>Block after a daily active scroll budget.</span>
+        </label>
+
+        <label>
+          Daily budget minutes
+          <input id="dailyBudgetMinutes" type="number" min="1" max="600" step="5">
+        </label>
+
+        <label class="check">
+          <input id="strictModeEnabled" type="checkbox">
+          <span>Require an unlock phrase after the timer ends.</span>
+        </label>
+
+        <label>
+          Strict unlock phrase
+          <input id="strictUnlockPhrase" type="text" maxlength="24" spellcheck="false">
+        </label>
+      </section>
+
       <section class="analytics" aria-label="Doomscroll analytics">
         <div class="section-title">
           <h2>Analytics</h2>
-          <button id="resetAnalytics" type="button" class="ghost">Reset</button>
+          <div class="actions">
+            <button id="exportAnalytics" type="button" class="ghost">Export</button>
+            <button id="resetAnalytics" type="button" class="ghost">Reset</button>
+          </div>
         </div>
         <div class="stats">
           <div>
@@ -63,6 +109,18 @@
           <div>
             <span id="avgSpeed">0</span>
             <p>avg px/s</p>
+          </div>
+          <div>
+            <span id="todayUsage">0m</span>
+            <p>today</p>
+          </div>
+          <div>
+            <span id="weeklyBlocks">0</span>
+            <p>7 days</p>
+          </div>
+          <div>
+            <span id="maxSpeed">0</span>
+            <p>max px/s</p>
           </div>
         </div>
         <dl>

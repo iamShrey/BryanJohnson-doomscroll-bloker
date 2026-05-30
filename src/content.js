@@ -4,6 +4,13 @@ const DEFAULT_SETTINGS = {
   maxBlockMinutes: 5,
   rapidScrollPxPerSecond: 650,
   contentInsightsEnabled: true,
+  dailyBudgetEnabled: false,
+  dailyBudgetMinutes: 30,
+  strictModeEnabled: false,
+  strictUnlockPhrase: "reset",
+  scheduleEnabled: false,
+  scheduleStart: "09:00",
+  scheduleEnd: "17:00",
   scrollWindowSeconds: 90,
   scrollDistancePx: 7200,
   domains: [
@@ -25,6 +32,11 @@ let scrollEvents = [];
 let lastY = window.scrollY;
 let isBlocked = false;
 let countdownId = null;
+let lastActivityAt = 0;
+let usageIntervalId = null;
+let strictUnlockShown = false;
+let currentBlockAnimation = "orbit";
+let currentBlockReason = "Doomscroll interrupted";
 
 init();
 
@@ -33,8 +45,10 @@ async function init() {
 
   const activeBlock = await getActiveBlock();
   if (activeBlock && activeBlock.endTime > Date.now()) {
-    blockPage(activeBlock.endTime, activeBlock.animation, { persist: false });
-    return;
+    blockPage(activeBlock.endTime, activeBlock.animation, {
+      persist: false,
+      reason: activeBlock.reason || "Doomscroll interrupted"
+    });
   }
 
   if (!settings.enabled || !isDoomscrollHost(location.hostname, settings.domains)) {
@@ -43,6 +57,8 @@ async function init() {
 
   window.addEventListener("scroll", trackScroll, { passive: true });
   window.addEventListener("keydown", trackKeyboardScroll, true);
+  window.addEventListener("mousemove", markActivity, { passive: true });
+  usageIntervalId = window.setInterval(recordActiveUsage, 15000);
 }
 
 function loadSettings() {
@@ -73,6 +89,8 @@ function normalizeSettings(savedSettings) {
   }
 
   settings.minBlockMinutes = Math.min(settings.minBlockMinutes, settings.maxBlockMinutes);
+  settings.dailyBudgetMinutes = Math.max(1, Number(settings.dailyBudgetMinutes) || DEFAULT_SETTINGS.dailyBudgetMinutes);
+  settings.strictUnlockPhrase = normalizeUnlockPhrase(settings.strictUnlockPhrase);
 
   return settings;
 }
@@ -112,6 +130,7 @@ function trackKeyboardScroll(event) {
   const scrollKeys = new Set(["ArrowDown", "PageDown", "Space", "End"]);
 
   if (scrollKeys.has(event.code) || scrollKeys.has(event.key)) {
+    markActivity();
     recordScroll(Math.max(window.innerHeight * 0.65, 420));
   }
 }
@@ -122,6 +141,7 @@ function trackScroll() {
   lastY = currentY;
 
   if (delta > 8) {
+    markActivity();
     recordScroll(delta);
   }
 }
@@ -136,7 +156,7 @@ function recordScroll(distance) {
 
   const totalDistance = scrollEvents.reduce((sum, event) => sum + event.distance, 0);
 
-  if (totalDistance >= settings.scrollDistancePx) {
+  if (totalDistance >= getScrollDistanceLimit()) {
     const scrollStats = getScrollStats(totalDistance, now);
     const durationMs = getBlockDurationMs(scrollStats.pxPerSecond);
     const endTime = Date.now() + durationMs;
@@ -149,10 +169,55 @@ function recordScroll(distance) {
         durationMs,
         host: location.hostname,
         pxPerSecond: scrollStats.pxPerSecond,
-        totalDistance
-      }
+        totalDistance,
+        trigger: getFocusHoursActive() ? "focus-hours-scroll" : "scroll"
+      },
+      reason: getFocusHoursActive() ? "Focus hours scroll limit reached" : "Scroll limit reached"
     });
   }
+}
+
+async function recordActiveUsage() {
+  if (isBlocked || document.visibilityState !== "visible" || Date.now() - lastActivityAt > 60000) {
+    return;
+  }
+
+  const response = await sendRuntimeMessage({
+    type: "DSB_RECORD_USAGE",
+    usageEvent: {
+      durationMs: 15000,
+      host: location.hostname
+    }
+  });
+
+  if (!settings.dailyBudgetEnabled) {
+    return;
+  }
+
+  const todayUsageMs = response?.analytics?.usageByDay?.[getTodayKey()] || 0;
+  const budgetMs = settings.dailyBudgetMinutes * 60 * 1000;
+
+  if (todayUsageMs >= budgetMs) {
+    const durationMs = Math.max(settings.maxBlockMinutes, settings.minBlockMinutes) * 60 * 1000;
+    const endTime = Date.now() + durationMs;
+    const animation = ANIMATIONS[Math.floor(Math.random() * ANIMATIONS.length)];
+
+    blockPage(endTime, animation, {
+      analyticsEvent: {
+        category: "budget",
+        durationMs,
+        host: location.hostname,
+        pxPerSecond: 0,
+        totalDistance: 0,
+        trigger: "daily-budget"
+      },
+      reason: "Daily scroll budget reached"
+    });
+  }
+}
+
+function markActivity() {
+  lastActivityAt = Date.now();
 }
 
 function getScrollStats(totalDistance, now) {
@@ -164,31 +229,39 @@ function getScrollStats(totalDistance, now) {
 }
 
 function getBlockDurationMs(pxPerSecond) {
-  const slowSpeed = settings.scrollDistancePx / settings.scrollWindowSeconds;
+  const slowSpeed = getScrollDistanceLimit() / settings.scrollWindowSeconds;
   const fastSpeed = Math.max(settings.rapidScrollPxPerSecond, slowSpeed + 1);
   const speedRatio = Math.min(1, Math.max(0, (pxPerSecond - slowSpeed) / (fastSpeed - slowSpeed)));
   const minutes = settings.maxBlockMinutes - speedRatio * (settings.maxBlockMinutes - settings.minBlockMinutes);
+  const focusMultiplier = getFocusHoursActive() ? 1.25 : 1;
 
-  return Math.max(1, minutes) * 60 * 1000;
+  return Math.max(1, minutes * focusMultiplier) * 60 * 1000;
+}
+
+function getScrollDistanceLimit() {
+  return settings.scrollDistancePx * (getFocusHoursActive() ? 0.75 : 1);
 }
 
 function blockPage(endTime, animation, options = {}) {
-  const { analyticsEvent = null, persist = true } = options;
+  const { analyticsEvent = null, persist = true, reason = "Doomscroll interrupted" } = options;
 
   isBlocked = true;
   scrollEvents = [];
+  strictUnlockShown = false;
+  currentBlockAnimation = animation;
+  currentBlockReason = reason;
 
   if (persist) {
     sendRuntimeMessage({
       type: "DSB_START_BLOCK",
       analyticsEvent,
-      block: { endTime, animation }
+      block: { endTime, animation, reason }
     });
   }
 
   document.documentElement.classList.add("dsb-locked");
   document.getElementById("doomscroll-blocker-overlay")?.remove();
-  document.body.appendChild(createOverlay(animation));
+  document.body.appendChild(createOverlay(animation, reason));
 
   const updateTimer = () => {
     const remaining = Math.max(0, endTime - Date.now());
@@ -201,6 +274,11 @@ function blockPage(endTime, animation, options = {}) {
     }
 
     if (remaining <= 0) {
+      if (settings.strictModeEnabled && !strictUnlockShown) {
+        showStrictUnlock();
+        return;
+      }
+
       unblockPage();
     }
   };
@@ -217,6 +295,42 @@ function unblockPage() {
   document.documentElement.classList.remove("dsb-locked");
   document.getElementById("doomscroll-blocker-overlay")?.remove();
   lastY = window.scrollY;
+}
+
+function showStrictUnlock() {
+  strictUnlockShown = true;
+  window.clearInterval(countdownId);
+  countdownId = null;
+  sendRuntimeMessage({
+    type: "DSB_START_BLOCK",
+    block: {
+      animation: currentBlockAnimation,
+      endTime: Date.now(),
+      reason: currentBlockReason,
+      unlockRequired: true
+    }
+  });
+
+  const timer = document.getElementById("dsb-timer");
+  const strictPanel = document.getElementById("dsb-strict");
+  const strictInput = document.getElementById("dsb-strict-input");
+  const phrase = normalizeUnlockPhrase(settings.strictUnlockPhrase);
+
+  if (timer) {
+    timer.textContent = "Ready";
+  }
+
+  if (strictPanel) {
+    strictPanel.hidden = false;
+  }
+
+  strictInput?.addEventListener("input", () => {
+    if (normalizeUnlockPhrase(strictInput.value) === phrase) {
+      unblockPage();
+    }
+  });
+
+  strictInput?.focus();
 }
 
 function analyzeVisiblePageContent() {
@@ -320,7 +434,48 @@ function getTopCategory(scores) {
   return score > 0 ? category : "uncategorized";
 }
 
-function createOverlay(animation) {
+function getFocusHoursActive() {
+  if (!settings.scheduleEnabled) {
+    return false;
+  }
+
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const startMinutes = parseTime(settings.scheduleStart);
+  const endMinutes = parseTime(settings.scheduleEnd);
+
+  if (startMinutes === endMinutes) {
+    return true;
+  }
+
+  if (startMinutes < endMinutes) {
+    return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+  }
+
+  return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+}
+
+function parseTime(value) {
+  const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
+
+  if (!match) {
+    return 0;
+  }
+
+  const hours = Math.min(23, Math.max(0, Number(match[1]) || 0));
+  const minutes = Math.min(59, Math.max(0, Number(match[2]) || 0));
+  return hours * 60 + minutes;
+}
+
+function getTodayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function normalizeUnlockPhrase(value) {
+  return String(value || DEFAULT_SETTINGS.strictUnlockPhrase).trim().toLowerCase() || DEFAULT_SETTINGS.strictUnlockPhrase;
+}
+
+function createOverlay(animation, reason) {
   const overlay = document.createElement("section");
   overlay.id = "doomscroll-blocker-overlay";
   overlay.setAttribute("role", "dialog");
@@ -332,10 +487,14 @@ function createOverlay(animation) {
       <div class="dsb-animation dsb-${animation}" aria-hidden="true">
         ${createAnimationMarkup(animation)}
       </div>
-      <p class="dsb-kicker">Doomscroll interrupted</p>
+      <p class="dsb-kicker">${escapeHtml(reason)}</p>
       <h1>Pause the feed. Let your brain catch up.</h1>
       <div id="dsb-timer" class="dsb-timer">05:00</div>
       <p class="dsb-copy">This pause belongs only to this tab. Close the tab and the timer is gone.</p>
+      <div id="dsb-strict" class="dsb-strict" hidden>
+        <label for="dsb-strict-input">Type "${escapeHtml(settings.strictUnlockPhrase)}" to unlock</label>
+        <input id="dsb-strict-input" type="text" autocomplete="off" spellcheck="false">
+      </div>
     </div>
   `;
 
@@ -360,4 +519,12 @@ function createAnimationMarkup(animation) {
   }
 
   return "<span></span><span></span><span></span><span></span>";
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

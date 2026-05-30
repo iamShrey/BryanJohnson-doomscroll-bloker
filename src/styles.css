@@ -70,6 +70,36 @@
   max-width: 520px;
 }
 
+.dsb-strict {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+  max-width: 360px;
+  width: 100%;
+}
+
+.dsb-strict[hidden] {
+  display: none;
+}
+
+.dsb-strict label {
+  color: #f9fafb;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.dsb-strict input {
+  background: rgba(255, 255, 255, 0.94);
+  border: 2px solid rgba(134, 239, 172, 0.72);
+  border-radius: 8px;
+  color: #111827;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 12px 14px;
+  text-align: center;
+}
+
 .dsb-animation {
   height: 180px;
   position: relative;
